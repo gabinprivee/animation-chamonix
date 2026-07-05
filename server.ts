@@ -88,6 +88,14 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Prevent any caching on API routes
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+
   // Helper: Broadcast WebSocket message to all connected clients
   const broadcast = (type: string, payload?: any) => {
     const msg = JSON.stringify({ type, payload });
@@ -177,7 +185,7 @@ async function startServer() {
     broadcast('POINTS_ADDED', { playerId: player.id, points: actualPoints, reason: newLog.reason, player });
     broadcast('STATE_UPDATED', stateData);
 
-    res.json({ success: true, player, log: newLog });
+    res.json({ success: true, player, log: newLog, stateData });
   });
 
   // Add points to ALL players or whole team
@@ -211,7 +219,7 @@ async function startServer() {
     broadcast('POINTS_BATCH', { teamName, points: actualPoints, reason });
     broadcast('STATE_UPDATED', stateData);
 
-    res.json({ success: true, count: updatedPlayers.length });
+    res.json({ success: true, count: updatedPlayers.length, stateData });
   });
 
   // Manage Players
@@ -244,7 +252,7 @@ async function startServer() {
     }
 
     broadcast('STATE_UPDATED', stateData);
-    res.json({ success: true, players: stateData.players });
+    res.json({ success: true, players: stateData.players, stateData });
   });
 
   // Manage Teams
@@ -277,7 +285,7 @@ async function startServer() {
       addHistoryLog(`Suppression de TOUTES les équipes`, 0, 'system', 'Système', '💥', stateData.state.round, animator || 'mickey');
     }
     broadcast('STATE_UPDATED', stateData);
-    res.json({ success: true, teams: stateData.teams });
+    res.json({ success: true, teams: stateData.teams, stateData });
   });
 
   // Update animation state & theme
@@ -286,7 +294,7 @@ async function startServer() {
     stateData.state = { ...stateData.state, ...state };
     addHistoryLog(`Mise à jour paramètres du tournoi`, 0, 'system', 'Système', '⚙️', stateData.state.round, animator || 'mickey');
     broadcast('STATE_UPDATED', stateData);
-    res.json({ success: true, state: stateData.state });
+    res.json({ success: true, state: stateData.state, stateData });
   });
 
   // Trigger Special Effects (Confetti, Fanfare, Alerte)
