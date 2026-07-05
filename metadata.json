@@ -1,0 +1,6 @@
+{
+  "name": "Classement Live Animation",
+  "description": "Application de classement en temps réel pour animations, quiz et tournois avec interface administrateur sécurisée et vue joueur interactive.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #4338ca;
+    color: #ffffff;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
