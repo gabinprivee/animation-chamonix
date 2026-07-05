@@ -12,11 +12,23 @@ export interface ToastAlert {
 }
 
 export function useLeaderboard() {
-  const [data, setData] = useState<LeaderboardData | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [data, setDataState] = useState<LeaderboardData | null>(null);
+  const [isConnected, setIsConnectedState] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastAlert[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<any>(null);
+  const dataRef = useRef<LeaderboardData | null>(null);
+  const isConnectedRef = useRef<boolean>(false);
+
+  const setData = useCallback((newData: LeaderboardData | null) => {
+    dataRef.current = newData;
+    setDataState(newData);
+  }, []);
+
+  const setIsConnected = useCallback((status: boolean) => {
+    isConnectedRef.current = status;
+    setIsConnectedState(status);
+  }, []);
 
   const addToast = useCallback((alert: Omit<ToastAlert, 'id'>) => {
     const id = 't_' + Date.now() + Math.random().toString(36).substring(2, 5);
@@ -36,7 +48,7 @@ export function useLeaderboard() {
     } catch (err) {
       console.error('Fallback polling error:', err);
     }
-  }, []);
+  }, [setData]);
 
   const triggerConfettiBlast = useCallback(() => {
     try {
@@ -150,12 +162,12 @@ export function useLeaderboard() {
     connectWs();
     fetchStateFallback();
 
-    // Polling backup every 5s just in case
+    // Polling backup every 3s just in case
     const pollInterval = setInterval(() => {
-      if (!isConnected || !data) {
+      if (!isConnectedRef.current || !dataRef.current) {
         fetchStateFallback();
       }
-    }, 5000);
+    }, 3000);
 
     return () => {
       isMounted = false;
@@ -163,7 +175,7 @@ export function useLeaderboard() {
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       clearInterval(pollInterval);
     };
-  }, [addToast, fetchStateFallback, triggerConfettiBlast, isConnected, data]);
+  }, [addToast, fetchStateFallback, triggerConfettiBlast, setData, setIsConnected]);
 
   return { data, setData, isConnected, toasts, triggerConfettiBlast, addToast };
 }
