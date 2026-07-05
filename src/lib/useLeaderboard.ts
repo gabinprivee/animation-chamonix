@@ -11,16 +11,45 @@ export interface ToastAlert {
   player?: Player;
 }
 
+const DEFAULT_INITIAL_DATA: LeaderboardData = {
+  players: [],
+  teams: [],
+  state: {
+    title: "Tournoi des Champions 🌟",
+    subtitle: "Grand Challenge en Direct",
+    round: "Manche 1 : Démarrage",
+    theme: "neon",
+    status: "active",
+    multiplier: 1,
+    announcement: "🔥 Astuce : Répondez aux quiz de l'animateur pour des points bonus !",
+    soundEnabled: true
+  },
+  history: []
+};
+
 export function useLeaderboard() {
-  const [data, setDataState] = useState<LeaderboardData | null>(null);
+  const [data, setDataState] = useState<LeaderboardData | null>(() => {
+    try {
+      const cached = localStorage.getItem('leaderboard_live_data');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.state) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_INITIAL_DATA;
+  });
   const [isConnected, setIsConnectedState] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastAlert[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<any>(null);
-  const dataRef = useRef<LeaderboardData | null>(null);
+  const dataRef = useRef<LeaderboardData | null>(data);
   const isConnectedRef = useRef<boolean>(false);
 
   const setData = useCallback((newData: LeaderboardData | null) => {
+    if (!newData || !newData.state) return;
+    try {
+      localStorage.setItem('leaderboard_live_data', JSON.stringify(newData));
+    } catch (e) {}
     dataRef.current = newData;
     setDataState(newData);
   }, []);
@@ -40,10 +69,17 @@ export function useLeaderboard() {
 
   const fetchStateFallback = useCallback(async () => {
     try {
-      const res = await fetch('/api/state');
+      const res = await fetch(`/api/state?_t=${Date.now()}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      });
       if (res.ok) {
         const json = await res.json();
-        setData(json);
+        if (json && json.state) {
+          setData(json);
+        }
       }
     } catch (err) {
       console.error('Fallback polling error:', err);
@@ -162,12 +198,10 @@ export function useLeaderboard() {
     connectWs();
     fetchStateFallback();
 
-    // Polling backup every 3s just in case
+    // Polling backup every 2s unconditionally for guaranteed real-time sync in iframe / cloud proxy environments
     const pollInterval = setInterval(() => {
-      if (!isConnectedRef.current || !dataRef.current) {
-        fetchStateFallback();
-      }
-    }, 3000);
+      fetchStateFallback();
+    }, 2000);
 
     return () => {
       isMounted = false;
