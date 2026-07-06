@@ -6,7 +6,7 @@ import {
   TrendingUp, Radio, AlertTriangle, ArrowLeft, LogOut, Download, Share2, FileText,
   Globe, Server
 } from 'lucide-react';
-import { getApiUrl, getRemoteServerUrl, setRemoteServerUrl } from '../lib/api';
+import { getApiUrl, getRemoteServerUrl, setRemoteServerUrl, apiFetch } from '../lib/api';
 
 interface AdminPanelProps {
   players: Player[];
@@ -70,10 +70,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const addPoints = async (playerId: string, pts: number) => {
     const reason = customReason.trim() || selectedReason;
     try {
-      await fetch(getApiUrl('/api/admin/points'), {
+      await apiFetch('/api/admin/points', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, points: pts, reason, round: state?.round, animator: currentAnimator?.name || 'mickey' }),
+        body: JSON.stringify({ id: playerId, delta: pts, reason, round: state?.round, animator: currentAnimator?.name || 'mickey' }),
       });
       onRefresh();
     } catch (err) {
@@ -84,10 +84,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const addBatchPoints = async (teamName: string, pts: number) => {
     const reason = customReason.trim() || selectedReason;
     try {
-      await fetch(getApiUrl('/api/admin/points-batch'), {
+      await apiFetch('/api/admin/points-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamName, points: pts, reason, animator: currentAnimator?.name || 'mickey' }),
+        body: JSON.stringify({ teamName, delta: pts, reason, animator: currentAnimator?.name || 'mickey' }),
       });
       onRefresh();
     } catch (err) {
@@ -99,7 +99,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     e.preventDefault();
     if (!newPlayerName.trim()) return;
     try {
-      await fetch(getApiUrl('/api/admin/players'), {
+      await apiFetch('/api/admin/players', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +117,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleDeletePlayer = async (id: string) => {
     try {
-      await fetch(getApiUrl('/api/admin/players'), {
+      await apiFetch('/api/admin/players', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id, animator: currentAnimator?.name || 'mickey' })
@@ -132,7 +132,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     e.preventDefault();
     if (!newTeamName.trim()) return;
     try {
-      await fetch(getApiUrl('/api/admin/teams'), {
+      await apiFetch('/api/admin/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,7 +150,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleDeleteTeam = async (id: string) => {
     try {
-      await fetch(getApiUrl('/api/admin/teams'), {
+      await apiFetch('/api/admin/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id, animator: currentAnimator?.name || 'mickey' })
@@ -163,7 +163,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleClearTeams = async () => {
     try {
-      await fetch(getApiUrl('/api/admin/teams'), {
+      await apiFetch('/api/admin/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'clear', animator: currentAnimator?.name || 'mickey' })
@@ -176,7 +176,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleUpdatePlayerTeam = async (player: Player, teamName: string) => {
     try {
-      await fetch(getApiUrl('/api/admin/players'), {
+      await apiFetch('/api/admin/players', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,7 +193,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleUpdateState = async (updates: Partial<AnimationState>) => {
     try {
-      await fetch(getApiUrl('/api/admin/state'), {
+      await apiFetch('/api/admin/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state: updates, animator: currentAnimator?.name || 'mickey' })
@@ -206,7 +206,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleTriggerEffect = async (effectType: string, message?: string) => {
     try {
-      await fetch(getApiUrl('/api/admin/trigger'), {
+      await apiFetch('/api/admin/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ effectType, message })
@@ -218,7 +218,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleReset = async (mode: 'scores' | 'all' | 'sample') => {
     try {
-      await fetch(getApiUrl('/api/admin/reset'), {
+      await apiFetch('/api/admin/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode, animator: currentAnimator?.name || 'mickey' })

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, KeyRound, ShieldCheck, AlertCircle, X, Sparkles } from 'lucide-react';
 import { ANIMATORS_LIST, AnimatorProfile } from '../types';
-import { getApiUrl } from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -42,7 +42,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     setError('');
 
     try {
-      const res = await fetch(getApiUrl('/api/admin/verify-pin'), {
+      const res = await apiFetch('/api/admin/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pinToUse }),

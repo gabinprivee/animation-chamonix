@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LeaderboardData, Player } from '../types';
 import { audioSynth } from './audio';
-import { getApiUrl, getWsUrl } from './api';
+import { getApiUrl, getWsUrl, apiFetch } from './api';
 import confetti from 'canvas-confetti';
 
 export interface ToastAlert {
@@ -70,7 +70,7 @@ export function useLeaderboard() {
 
   const fetchStateFallback = useCallback(async () => {
     try {
-      const res = await fetch(getApiUrl(`/api/state?_t=${Date.now()}`), {
+      const res = await apiFetch(`/api/state?_t=${Date.now()}`, {
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate'
@@ -198,6 +198,14 @@ export function useLeaderboard() {
     connectWs();
     fetchStateFallback();
 
+    const handleLocalUpdate = (e: any) => {
+      if (!isMounted) return;
+      if (e.detail) {
+        setData(e.detail);
+      }
+    };
+    window.addEventListener('local-state-updated', handleLocalUpdate);
+
     // Polling backup every 2s unconditionally for guaranteed real-time sync in iframe / cloud proxy environments
     const pollInterval = setInterval(() => {
       fetchStateFallback();
@@ -205,6 +213,7 @@ export function useLeaderboard() {
 
     return () => {
       isMounted = false;
+      window.removeEventListener('local-state-updated', handleLocalUpdate);
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       clearInterval(pollInterval);
