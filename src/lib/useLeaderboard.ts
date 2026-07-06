@@ -206,6 +206,52 @@ export function useLeaderboard() {
     };
     window.addEventListener('local-state-updated', handleLocalUpdate);
 
+    const handleLocalEffect = (e: any) => {
+      if (!isMounted || !e.detail) return;
+      const { effectType, message } = e.detail;
+      if (effectType === 'confetti') {
+        audioSynth.playBigFanfare();
+        triggerConfettiBlast();
+        if (message) addToast({ type: 'cheer', message });
+      } else if (effectType === 'alert') {
+        audioSynth.playAlertSound();
+        if (message) addToast({ type: 'alert', message });
+      }
+    };
+    window.addEventListener('local-special-effect', handleLocalEffect);
+
+    const handleLocalPoints = (e: any) => {
+      if (!isMounted || !e.detail) return;
+      const { points, reason, player } = e.detail;
+      if (player) {
+        if (points >= 25) {
+          audioSynth.playBigFanfare();
+          triggerConfettiBlast();
+        } else {
+          audioSynth.playPointSound(points);
+        }
+        addToast({
+          type: 'points',
+          message: `${player.avatar} ${player.name} : ${points >= 0 ? '+' : ''}${points} pts ! (${reason})`,
+          points,
+          player
+        });
+      }
+    };
+    window.addEventListener('local-points-update', handleLocalPoints);
+
+    const handleLocalBatch = (e: any) => {
+      if (!isMounted || !e.detail) return;
+      const { teamName, points, reason } = e.detail;
+      audioSynth.playPointSound(points);
+      addToast({
+        type: 'points',
+        message: `Bonus de groupe (${teamName || 'Tous'}) : ${points >= 0 ? '+' : ''}${points} pts ! (${reason})`,
+        points
+      });
+    };
+    window.addEventListener('local-points-batch', handleLocalBatch);
+
     // Polling backup every 2s unconditionally for guaranteed real-time sync in iframe / cloud proxy environments
     const pollInterval = setInterval(() => {
       fetchStateFallback();
@@ -214,6 +260,9 @@ export function useLeaderboard() {
     return () => {
       isMounted = false;
       window.removeEventListener('local-state-updated', handleLocalUpdate);
+      window.removeEventListener('local-special-effect', handleLocalEffect);
+      window.removeEventListener('local-points-update', handleLocalPoints);
+      window.removeEventListener('local-points-batch', handleLocalBatch);
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       clearInterval(pollInterval);

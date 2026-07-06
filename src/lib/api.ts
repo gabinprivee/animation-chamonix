@@ -139,13 +139,13 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
       data.players.push(newPlayer);
       data.history.unshift({
         id: 'h_' + Date.now(),
-        timestamp: Date.now(),
-        action: `Création joueur : ${newPlayer.name}`,
-        pointsDelta: 0,
-        targetId: newPlayer.id,
-        targetName: newPlayer.name,
-        targetAvatar: newPlayer.avatar,
-        round: data.state.round,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        playerId: newPlayer.id,
+        playerName: newPlayer.name,
+        playerAvatar: newPlayer.avatar,
+        points: 0,
+        reason: `Création joueur : ${newPlayer.name}`,
+        round: data.state.round || 'En cours',
         animator: animator || 'mickey'
       });
     } else if (action === 'update') {
@@ -187,23 +187,35 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
   if (cleanPath === '/api/admin/points') {
     const { id, delta, reason, animator } = body;
     const idx = data.players.findIndex(p => p.id === id);
+    let actualDelta = 0;
     if (idx !== -1) {
-      const actualDelta = Number(delta) * (data.state.multiplier || 1);
+      actualDelta = Number(delta) * (data.state.multiplier || 1);
       data.players[idx].score += actualDelta;
       data.players[idx].lastUpdated = Date.now();
       data.history.unshift({
         id: 'h_' + Date.now(),
-        timestamp: Date.now(),
-        action: `${actualDelta >= 0 ? '+' : ''}${actualDelta} pts : ${reason || 'Bonus'}`,
-        pointsDelta: actualDelta,
-        targetId: data.players[idx].id,
-        targetName: data.players[idx].name,
-        targetAvatar: data.players[idx].avatar,
-        round: data.state.round,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        playerId: data.players[idx].id,
+        playerName: data.players[idx].name,
+        playerAvatar: data.players[idx].avatar,
+        points: actualDelta,
+        reason: reason || 'Bonus',
+        round: data.state.round || 'En cours',
         animator: animator || 'mickey'
       });
     }
     saveLocalStateData(data);
+    if (idx !== -1) {
+      try {
+        window.dispatchEvent(new CustomEvent('local-points-update', {
+          detail: {
+            points: actualDelta,
+            reason: reason || 'Bonus',
+            player: data.players[idx]
+          }
+        }));
+      } catch (e) {}
+    }
     return new Response(JSON.stringify({ success: true, players: data.players, stateData: data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -218,16 +230,25 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
     });
     data.history.unshift({
       id: 'h_' + Date.now(),
-      timestamp: Date.now(),
-      action: `Groupe ${teamName || 'Tous'} : ${actualDelta >= 0 ? '+' : ''}${actualDelta} pts (${reason || 'Bonus'})`,
-      pointsDelta: actualDelta,
-      targetId: 'batch',
-      targetName: teamName || 'Tous les joueurs',
-      targetAvatar: '👥',
-      round: data.state.round,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      playerId: 'batch',
+      playerName: teamName || 'Tous les joueurs',
+      playerAvatar: '👥',
+      points: actualDelta,
+      reason: `Groupe ${teamName || 'Tous'} (${reason || 'Bonus'})`,
+      round: data.state.round || 'En cours',
       animator: animator || 'mickey'
     });
     saveLocalStateData(data);
+    try {
+      window.dispatchEvent(new CustomEvent('local-points-batch', {
+        detail: {
+          teamName,
+          points: actualDelta,
+          reason: reason || 'Bonus'
+        }
+      }));
+    } catch (e) {}
     return new Response(JSON.stringify({ success: true, players: data.players, stateData: data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -266,6 +287,10 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
   }
 
   if (cleanPath === '/api/admin/trigger') {
+    const { effectType, message } = body;
+    try {
+      window.dispatchEvent(new CustomEvent('local-special-effect', { detail: { effectType, message } }));
+    } catch (e) {}
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
 

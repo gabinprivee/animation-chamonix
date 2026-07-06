@@ -206,6 +206,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleTriggerEffect = async (effectType: string, message?: string) => {
     try {
+      window.dispatchEvent(new CustomEvent('local-special-effect', { detail: { effectType, message } }));
+    } catch (e) {}
+    try {
       await apiFetch('/api/admin/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
