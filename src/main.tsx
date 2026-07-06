@@ -3,6 +3,28 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// PATCH DE SÉCURITÉ DOM (Anti-Crash pour Google Translate / Extensions navigateur)
+// Évite l'erreur célèbre "NotFoundError: Failed to execute 'removeChild' on 'Node'" dans React 18
+if (typeof window !== 'undefined' && typeof Node !== 'undefined' && Node.prototype) {
+  const originalRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function <T extends Node>(child: T): T {
+    if (child && child.parentNode !== this) {
+      console.warn("[Anti-Crash DOM] removeChild évité: le nœud a été modifié par le navigateur ou une extension (ex: Google Translate).", child);
+      return child;
+    }
+    return originalRemoveChild.call(this, child) as T;
+  };
+
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function <T extends Node>(newNode: T, referenceNode: Node | null): T {
+    if (referenceNode && referenceNode.parentNode !== this) {
+      console.warn("[Anti-Crash DOM] insertBefore évité: le nœud de référence a été modifié.", referenceNode);
+      return originalInsertBefore.call(this, newNode, null) as T;
+    }
+    return originalInsertBefore.call(this, newNode, referenceNode) as T;
+  };
+}
+
 interface Props {
   children: ReactNode;
 }
