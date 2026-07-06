@@ -118,6 +118,35 @@ class SoundEffects {
     osc.start(now);
     osc.stop(now + 0.45);
   }
+
+  public playOvertakeSound() {
+    if (this.muted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    // Ascending power-up / overtake turbo boost (E4 -> A4 -> D5 -> A5 -> E6)
+    const notes = [329.63, 440.0, 587.33, 880.0, 1318.51];
+    
+    notes.forEach((freq, idx) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.15, now + idx * 0.05 + 0.18);
+
+      gain.gain.setValueAtTime(0.28, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.05 + 0.22);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.22);
+    });
+  }
 }
 
 export const audioSynth = new SoundEffects();

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, KeyRound, ShieldCheck, AlertCircle, X, Sparkles } from 'lucide-react';
 import { ANIMATORS_LIST, AnimatorProfile } from '../types';
+import { getApiUrl } from '../lib/api';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     setError('');
 
     try {
-      const res = await fetch('/api/admin/verify-pin', {
+      const res = await fetch(getApiUrl('/api/admin/verify-pin'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pinToUse }),
@@ -56,7 +57,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
       }
     } catch (err) {
       // Fallback offline verification if API fails in demo
-      const simpleMap: Record<string, string> = { '1111': '1', '2222': '2', '3333': '3', '4444': '4', '5555': '5', '6666': '6', '7777': '7' };
+      const simpleMap: Record<string, string> = { '1111': '1', '2222': '2', '3333': '3', '4444': '4', '5555': '5', '6666': '6', '7777': '7', '8888': '8' };
       const targetId = simpleMap[pinToUse] || pinToUse;
       const found = ANIMATORS_LIST.find(a => a.pin === pinToUse || a.id === targetId || a.name === pinToUse.toLowerCase()) || selectedAnimator || { name: 'mickey', avatar: '🐭' };
       if (pinToUse === '1234' || pinToUse === 'admin' || simpleMap[pinToUse] || ANIMATORS_LIST.some(a => a.pin === pinToUse || a.id === pinToUse)) {
@@ -91,12 +92,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
           </p>
         </div>
 
-        {/* 7 Animator Profiles Picker */}
+        {/* 8 Animator Profiles Picker */}
         <div className="space-y-1.5 text-left bg-indigo-950/80 p-2.5 rounded-2xl border border-yellow-400/30">
           <p className="text-[10px] font-black text-yellow-300 uppercase tracking-wider text-center">
-            👑 Les 7 Animateurs (Cliquez pour sélectionner votre profil) :
+            👑 Les 8 Animateurs (Cliquez pour sélectionner votre profil) :
           </p>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 pt-1">
+          <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-1.5 pt-1">
             {ANIMATORS_LIST.map((anim) => {
               const isSelected = selectedAnimator?.id === anim.id;
               return (
@@ -126,7 +127,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
         {/* Security Banner */}
         <div className="p-2.5 rounded-xl bg-indigo-950/90 text-indigo-200 border border-indigo-500/50 text-[11px] flex items-center gap-2 text-left shadow-md font-medium">
           <Lock className="w-4 h-4 shrink-0 text-yellow-400" />
-          <span><strong>Console Protégée :</strong> Saisissez votre code secret à 6 chiffres (ou votre numéro d'identifiant #1 à #7 en cas d'oubli) sur le clavier.</span>
+          <span><strong>Console Protégée :</strong> Saisissez votre code secret à 6 chiffres (ou votre numéro d'identifiant #1 à #8 en cas d'oubli) sur le clavier.</span>
         </div>
 
         {/* PIN Display */}

@@ -3,8 +3,10 @@ import { Player, Team, AnimationState, HistoryLog, AdminTab, ThemeType, ANIMATOR
 import {
   Trophy, Users, Settings, Sparkles, Flame, Plus, Trash2, Edit3, Check, RefreshCw,
   Zap, Volume2, Award, ShieldAlert, ChevronRight, Play, MessageSquare,
-  TrendingUp, Radio, AlertTriangle, ArrowLeft, LogOut, Download, Share2, FileText
+  TrendingUp, Radio, AlertTriangle, ArrowLeft, LogOut, Download, Share2, FileText,
+  Globe, Server
 } from 'lucide-react';
+import { getApiUrl, getRemoteServerUrl, setRemoteServerUrl } from '../lib/api';
 
 interface AdminPanelProps {
   players: Player[];
@@ -34,6 +36,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [selectedReason, setSelectedReason] = useState<string>('Bonne réponse au Quiz');
   const [customReason, setCustomReason] = useState<string>('');
   const [customPoints, setCustomPoints] = useState<string>('15');
+  const [remoteUrlInput, setRemoteUrlInput] = useState<string>(getRemoteServerUrl());
+  const [remoteSaveSuccess, setRemoteSaveSuccess] = useState<boolean>(false);
 
   // New Player state
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -66,7 +70,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const addPoints = async (playerId: string, pts: number) => {
     const reason = customReason.trim() || selectedReason;
     try {
-      await fetch('/api/admin/points', {
+      await fetch(getApiUrl('/api/admin/points'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, points: pts, reason, round: state?.round, animator: currentAnimator?.name || 'mickey' }),
@@ -80,7 +84,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const addBatchPoints = async (teamName: string, pts: number) => {
     const reason = customReason.trim() || selectedReason;
     try {
-      await fetch('/api/admin/points-batch', {
+      await fetch(getApiUrl('/api/admin/points-batch'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamName, points: pts, reason, animator: currentAnimator?.name || 'mickey' }),
@@ -95,7 +99,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     e.preventDefault();
     if (!newPlayerName.trim()) return;
     try {
-      await fetch('/api/admin/players', {
+      await fetch(getApiUrl('/api/admin/players'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -113,7 +117,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleDeletePlayer = async (id: string) => {
     try {
-      await fetch('/api/admin/players', {
+      await fetch(getApiUrl('/api/admin/players'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id, animator: currentAnimator?.name || 'mickey' })
@@ -128,7 +132,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     e.preventDefault();
     if (!newTeamName.trim()) return;
     try {
-      await fetch('/api/admin/teams', {
+      await fetch(getApiUrl('/api/admin/teams'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,7 +150,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleDeleteTeam = async (id: string) => {
     try {
-      await fetch('/api/admin/teams', {
+      await fetch(getApiUrl('/api/admin/teams'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id, animator: currentAnimator?.name || 'mickey' })
@@ -159,7 +163,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleClearTeams = async () => {
     try {
-      await fetch('/api/admin/teams', {
+      await fetch(getApiUrl('/api/admin/teams'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'clear', animator: currentAnimator?.name || 'mickey' })
@@ -172,7 +176,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleUpdatePlayerTeam = async (player: Player, teamName: string) => {
     try {
-      await fetch('/api/admin/players', {
+      await fetch(getApiUrl('/api/admin/players'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -189,7 +193,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleUpdateState = async (updates: Partial<AnimationState>) => {
     try {
-      await fetch('/api/admin/state', {
+      await fetch(getApiUrl('/api/admin/state'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state: updates, animator: currentAnimator?.name || 'mickey' })
@@ -202,7 +206,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleTriggerEffect = async (effectType: string, message?: string) => {
     try {
-      await fetch('/api/admin/trigger', {
+      await fetch(getApiUrl('/api/admin/trigger'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ effectType, message })
@@ -214,7 +218,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleReset = async (mode: 'scores' | 'all' | 'sample') => {
     try {
-      await fetch('/api/admin/reset', {
+      await fetch(getApiUrl('/api/admin/reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode, animator: currentAnimator?.name || 'mickey' })
@@ -780,6 +784,75 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {activeTab === 'settings' && (
             <div className="space-y-8 max-w-3xl">
               
+              {/* SOLUTION 2 : SERVEUR DISTANT (NETLIFY / 40 PC) */}
+              <div className="bg-gradient-to-r from-indigo-900/80 via-purple-900/80 to-slate-900/80 border-2 border-indigo-500/50 rounded-2xl p-6 space-y-4 shadow-2xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-yellow-300 flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-indigo-400 animate-pulse" />
+                      <span>Configuration du Serveur Distant (Solution 2 - Netlify / 40 PC)</span>
+                    </h3>
+                    <p className="text-xs text-indigo-200 leading-relaxed">
+                      Sur <strong>Netlify</strong>, le site est statique et n'héberge pas le moteur Node.js. Pour synchroniser les 40 ordinateurs en direct : hébergez le serveur sur <strong>Render / Railway / Glitch</strong> et collez son adresse ici.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
+                    URL du serveur distant (ex: https://mon-serveur.onrender.com) :
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      value={remoteUrlInput}
+                      onChange={(e) => setRemoteUrlInput(e.target.value)}
+                      placeholder="Laisser vide pour utiliser le serveur local par défaut..."
+                      className="flex-1 bg-black/50 border border-indigo-400/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400 font-mono transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRemoteServerUrl(remoteUrlInput);
+                        setRemoteSaveSuccess(true);
+                        setTimeout(() => setRemoteSaveSuccess(false), 3000);
+                        onRefresh();
+                        setTimeout(() => window.location.reload(), 800);
+                      }}
+                      className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg transition cursor-pointer"
+                    >
+                      <Server className="w-4 h-4" />
+                      <span>{remoteSaveSuccess ? '✅ Connecté !' : 'Connecter & Relancer'}</span>
+                    </button>
+                    {getRemoteServerUrl() && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRemoteUrlInput('');
+                          setRemoteServerUrl('');
+                          onRefresh();
+                          setTimeout(() => window.location.reload(), 500);
+                        }}
+                        className="px-4 py-2.5 bg-red-900/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                      >
+                        Réinitialiser
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {getRemoteServerUrl() ? (
+                  <div className="bg-emerald-950/60 border border-emerald-500/40 rounded-xl px-4 py-2 text-xs text-emerald-300 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>🟢 <strong>Mode Solution 2 Actif</strong> — Connecté au serveur distant : <code>{getRemoteServerUrl()}</code></span>
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2 text-xs text-gray-400">
+                    <span>💡 <strong>Mode Local par défaut</strong> — Utilisez cette case uniquement si votre site est publié sur Netlify ou hébergé sans serveur Node.js intégré.</span>
+                  </div>
+                )}
+              </div>
+
               {/* Theme Selector */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
@@ -958,7 +1031,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <div>
                   <h2 className="text-lg font-black uppercase italic tracking-tight text-yellow-300 flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-pink-500" />
-                    <span>Journal des modifications des 7 Animateurs</span>
+                    <span>Journal des modifications des Animateurs</span>
                   </h2>
                   <p className="text-xs font-bold text-indigo-200 mt-0.5">
                     Toutes les actions (points, équipes, paramètres) sont associées à l'animateur en poste.

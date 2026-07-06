@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLeaderboard } from './lib/useLeaderboard';
 import { audioSynth } from './lib/audio';
+import { getApiUrl } from './lib/api';
 import { Header } from './components/Header';
 import { PlayerView } from './components/PlayerView';
 import { AdminPanel } from './components/AdminPanel';
@@ -56,7 +57,7 @@ export default function App() {
 
   const handleRefresh = async () => {
     try {
-      const res = await fetch('/api/state');
+      const res = await fetch(getApiUrl('/api/state'));
       if (res.ok) {
         const json = await res.json();
         setData(json);

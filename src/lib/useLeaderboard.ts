@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LeaderboardData, Player } from '../types';
 import { audioSynth } from './audio';
+import { getApiUrl, getWsUrl } from './api';
 import confetti from 'canvas-confetti';
 
 export interface ToastAlert {
@@ -69,7 +70,7 @@ export function useLeaderboard() {
 
   const fetchStateFallback = useCallback(async () => {
     try {
-      const res = await fetch(`/api/state?_t=${Date.now()}`, {
+      const res = await fetch(getApiUrl(`/api/state?_t=${Date.now()}`), {
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate'
@@ -116,8 +117,7 @@ export function useLeaderboard() {
     const connectWs = () => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = getWsUrl();
 
       try {
         const ws = new WebSocket(wsUrl);

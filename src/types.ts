@@ -15,6 +15,7 @@ export const ANIMATORS_LIST: AnimatorProfile[] = [
   { id: '5', name: 'axel', avatar: '🔥', pin: '492751' },
   { id: '6', name: 'le_c', avatar: '🎭', pin: '385160' },
   { id: '7', name: 'nath', avatar: '⭐', pin: '274693' },
+  { id: '8', name: 'jeremy', avatar: '🚀', pin: '518294' },
 ];
 
 export interface Player {

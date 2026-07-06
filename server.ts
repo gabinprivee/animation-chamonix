@@ -79,6 +79,13 @@ const ANIMATORS_MAP: Record<string, { id: string; name: string; avatar: string }
   '274693': { id: '7', name: 'nath', avatar: '⭐' },
   '7007': { id: '7', name: 'nath', avatar: '⭐' },
   'nath': { id: '7', name: 'nath', avatar: '⭐' },
+
+  '8': { id: '8', name: 'jeremy', avatar: '🚀' },
+  '0008': { id: '8', name: 'jeremy', avatar: '🚀' },
+  '8888': { id: '8', name: 'jeremy', avatar: '🚀' },
+  '518294': { id: '8', name: 'jeremy', avatar: '🚀' },
+  '8008': { id: '8', name: 'jeremy', avatar: '🚀' },
+  'jeremy': { id: '8', name: 'jeremy', avatar: '🚀' },
 };
 
 async function startServer() {

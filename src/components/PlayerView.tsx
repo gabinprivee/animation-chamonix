@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Player, Team, AnimationState, HistoryLog, ThemeType } from '../types';
 import { Trophy, Flame, Award, Sparkles, TrendingUp, Zap, Clock, Users, History, ListFilter, User, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { audioSynth } from '../lib/audio';
 
 interface PlayerViewProps {
   players: Player[];
@@ -42,6 +43,70 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
 
   const topThree = sortedPlayers.slice(0, 3);
   const restPlayers = sortedPlayers.slice(3);
+
+  // Store previous player rank positions to detect overtakes
+  const prevRanksRef = useRef<Record<string, number>>({});
+  const [overtakeEvents, setOvertakeEvents] = useState<Record<string, { diff: number; overtakenNames: string[] }>>({});
+
+  useEffect(() => {
+    if (sortedPlayers.length === 0) return;
+
+    const currentRanks: Record<string, number> = {};
+    sortedPlayers.forEach((p, idx) => {
+      currentRanks[p.id] = idx;
+    });
+
+    const prevRanks = prevRanksRef.current;
+    if (Object.keys(prevRanks).length > 0) {
+      const newOvertakes: Record<string, { diff: number; overtakenNames: string[] }> = {};
+      let hasOvertake = false;
+
+      sortedPlayers.forEach((p, idx) => {
+        const oldRank = prevRanks[p.id];
+        // If player existed before and their current rank index is smaller than their old rank index
+        if (oldRank !== undefined && idx < oldRank) {
+          const diff = oldRank - idx;
+          // Find who was overtaken: players whose oldRank was < oldRank of p, but whose current rank index is >= idx
+          const overtakenNames = sortedPlayers
+            .filter(other => {
+              const otherOldRank = prevRanks[other.id];
+              const otherNewRank = currentRanks[other.id];
+              return other.id !== p.id && otherOldRank !== undefined && otherOldRank < oldRank && otherNewRank >= idx;
+            })
+            .map(other => `${other.avatar || ''} ${other.name}`.trim());
+
+          if (diff > 0 && overtakenNames.length > 0) {
+            newOvertakes[p.id] = { diff, overtakenNames };
+            hasOvertake = true;
+          }
+        }
+      });
+
+      if (hasOvertake) {
+        // Play overtake sound!
+        audioSynth.playOvertakeSound();
+        setOvertakeEvents(newOvertakes);
+
+        // Clear the overtake visual animation after 4.5 seconds
+        const timer = setTimeout(() => {
+          setOvertakeEvents(prev => {
+            const copy = { ...prev };
+            Object.keys(newOvertakes).forEach(id => delete copy[id]);
+            return copy;
+          });
+        }, 4500);
+
+        prevRanksRef.current = currentRanks;
+        return () => clearTimeout(timer);
+      }
+    }
+
+    prevRanksRef.current = currentRanks;
+  }, [sortedPlayers]);
+
+  const overtake1 = topThree[1] ? overtakeEvents[topThree[1].id] : undefined;
+  const overtake0 = topThree[0] ? overtakeEvents[topThree[0].id] : undefined;
+  const overtake2 = topThree[2] ? overtakeEvents[topThree[2].id] : undefined;
 
   // Selected player for chart and their points trajectory
   const selectedChartPlayer = useMemo(() => {
@@ -218,7 +283,13 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {teamScores.map((t, idx) => (
-                <div key={t.id} className="bg-indigo-800/80 rounded-2xl p-4 border-2 border-indigo-600 space-y-3 shadow-lg">
+                <motion.div
+                  key={t.id}
+                  layout
+                  layoutId={`team-${t.id}`}
+                  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  className="bg-indigo-800/80 rounded-2xl p-4 border-2 border-indigo-600 space-y-3 shadow-lg"
+                >
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-bold flex items-center gap-2 text-white uppercase text-base">
                       <span className="text-xl">{t.icon}</span>
@@ -235,7 +306,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
                       className="h-full rounded-full shadow-md"
                     />
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -251,6 +322,45 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
             <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-indigo-200 mt-1">Les leaders de la {state?.round || "Manche actuelle"}</p>
           </div>
 
+          {/* OVERTAKE ANNOUNCEMENT BANNER */}
+          <AnimatePresence>
+            {Object.entries(overtakeEvents).map(([playerId, event]: [string, { diff: number; overtakenNames: string[] }]) => {
+              const player = players.find(p => p.id === playerId);
+              if (!player) return null;
+              const playerRank = sortedPlayers.findIndex(p => p.id === playerId) + 1;
+              return (
+                <motion.div
+                  key={playerId}
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.3 } }}
+                  className="mb-6 max-w-3xl mx-auto bg-gradient-to-r from-pink-600 via-purple-600 to-amber-500 p-1 rounded-2xl shadow-[0_0_35px_rgba(236,72,153,0.8)] animate-pulse z-50 relative"
+                >
+                  <div className="bg-indigo-950/95 rounded-xl px-4 py-3 flex items-center justify-between gap-4 text-white border border-white/30">
+                    <div className="flex items-center gap-3 text-left">
+                      <span className="text-3xl sm:text-4xl animate-bounce">{player.avatar}</span>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-yellow-300 uppercase text-base sm:text-lg tracking-tight">{player.name}</span>
+                          <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-indigo-950 font-black text-xs px-2.5 py-0.5 rounded-full uppercase shadow-md flex items-center gap-1 animate-bounce">
+                            🚀 +{event.diff} {event.diff === 1 ? 'PLACE' : 'PLACES'} !
+                          </span>
+                        </div>
+                        <p className="text-xs text-indigo-200 font-medium mt-0.5">
+                          🔥 Dépassement dans le classement : grimpe devant <strong className="text-yellow-300 font-bold">{event.overtakenNames.slice(0, 3).join(', ')}</strong> !
+                        </p>
+                      </div>
+                    </div>
+                    <div className="hidden sm:flex flex-col items-end shrink-0">
+                      <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Nouveau Rang</span>
+                      <span className="font-black text-2xl text-yellow-300">#{playerRank}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
           {players.length === 0 ? (
             <div className="text-center py-16 bg-indigo-900/50 rounded-3xl border-4 border-indigo-400 shadow-2xl">
               <Trophy className="w-12 h-12 text-yellow-300 mx-auto mb-3 opacity-80 animate-bounce" />
@@ -263,11 +373,22 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
               {/* 2nd Place (Silver) */}
               {topThree[1] ? (
                 <motion.div
+                  key={topThree[1].id}
+                  layout
                   layoutId={topThree[1].id}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                  className="flex flex-col items-center"
+                  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  className={`flex flex-col items-center relative ${overtake1 ? 'scale-105 z-30' : ''}`}
                 >
-                  <div className="relative mb-2">
+                  {overtake1 && (
+                    <motion.div
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: [1.3, 1, 1.1, 1], y: -5 }}
+                      className="absolute -top-10 z-50 bg-gradient-to-r from-yellow-400 to-orange-500 text-indigo-950 font-black text-xs px-3 py-1 rounded-full shadow-[0_0_20px_rgba(250,204,21,0.9)] border-2 border-white flex items-center gap-1 whitespace-nowrap animate-bounce"
+                    >
+                      <span>🚀 +{overtake1.diff} {overtake1.diff === 1 ? 'place' : 'places'} !</span>
+                    </motion.div>
+                  )}
+                  <div className={`relative mb-2 ${overtake1 ? 'ring-4 ring-yellow-400 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.8)]' : ''}`}>
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-300 text-indigo-900 border-4 border-slate-500 flex items-center justify-center text-3xl sm:text-4xl shadow-xl transform -rotate-3 hover:rotate-0 transition-transform font-black">
                       {topThree[1].avatar}
                     </div>
@@ -291,11 +412,22 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
               {/* 1st Place (Gold) - VIP Center */}
               {topThree[0] ? (
                 <motion.div
+                  key={topThree[0].id}
+                  layout
                   layoutId={topThree[0].id}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                  className="flex flex-col items-center z-10 -mt-6"
+                  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  className={`flex flex-col items-center z-10 -mt-6 relative ${overtake0 ? 'scale-110 z-40' : ''}`}
                 >
-                  <div className="relative mb-3">
+                  {overtake0 && (
+                    <motion.div
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: [1.3, 1, 1.1, 1], y: -10 }}
+                      className="absolute -top-12 z-50 bg-gradient-to-r from-yellow-400 via-pink-500 to-orange-500 text-white font-black text-xs sm:text-sm px-3.5 py-1 rounded-full shadow-[0_0_25px_rgba(250,204,21,0.9)] border-2 border-white flex items-center gap-1 whitespace-nowrap animate-bounce"
+                    >
+                      <span>👑🚀 +{overtake0.diff} {overtake0.diff === 1 ? 'place' : 'places'} !</span>
+                    </motion.div>
+                  )}
+                  <div className={`relative mb-3 ${overtake0 ? 'ring-4 ring-yellow-300 rounded-3xl shadow-[0_0_40px_rgba(250,204,21,0.9)]' : ''}`}>
                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 animate-bounce">
                       <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]">👑</span>
                     </div>
@@ -329,11 +461,22 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
               {/* 3rd Place (Bronze) */}
               {topThree[2] ? (
                 <motion.div
+                  key={topThree[2].id}
+                  layout
                   layoutId={topThree[2].id}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                  className="flex flex-col items-center"
+                  transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  className={`flex flex-col items-center relative ${overtake2 ? 'scale-105 z-30' : ''}`}
                 >
-                  <div className="relative mb-2">
+                  {overtake2 && (
+                    <motion.div
+                      initial={{ scale: 0, y: 10 }}
+                      animate={{ scale: [1.3, 1, 1.1, 1], y: -5 }}
+                      className="absolute -top-10 z-50 bg-gradient-to-r from-yellow-400 to-orange-500 text-indigo-950 font-black text-xs px-3 py-1 rounded-full shadow-[0_0_20px_rgba(250,204,21,0.9)] border-2 border-white flex items-center gap-1 whitespace-nowrap animate-bounce"
+                    >
+                      <span>🚀 +{overtake2.diff} {overtake2.diff === 1 ? 'place' : 'places'} !</span>
+                    </motion.div>
+                  )}
+                  <div className={`relative mb-2 ${overtake2 ? 'ring-4 ring-yellow-400 rounded-2xl shadow-[0_0_30px_rgba(250,204,21,0.8)]' : ''}`}>
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-orange-400 text-indigo-900 border-4 border-orange-600 flex items-center justify-center text-3xl sm:text-4xl shadow-xl transform rotate-3 hover:rotate-0 transition-transform font-black">
                       {topThree[2].avatar}
                     </div>
@@ -370,15 +513,21 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
               <AnimatePresence>
                 {restPlayers.map((player, index) => {
                   const actualRank = index + 4;
+                  const overtake = overtakeEvents[player.id];
                   return (
                     <motion.div
                       key={player.id}
+                      layout
                       layoutId={player.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                      className="flex items-center justify-between p-4 rounded-2xl bg-indigo-800/80 hover:bg-indigo-800 border-2 border-indigo-600 transition-all group shadow-md"
+                      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                      className={`flex items-center justify-between p-4 rounded-2xl transition-all group shadow-md relative ${
+                        overtake 
+                          ? 'bg-gradient-to-r from-pink-900/90 via-indigo-900/90 to-amber-900/90 border-2 border-yellow-400 ring-4 ring-yellow-400/50 shadow-[0_0_25px_rgba(250,204,21,0.6)] z-20 scale-[1.02]' 
+                          : 'bg-indigo-800/80 hover:bg-indigo-800 border-2 border-indigo-600'
+                      }`}
                     >
                       <div className="flex items-center gap-3.5 sm:gap-4">
                         <span className="w-8 text-center font-black text-yellow-300 text-base sm:text-lg">
@@ -391,7 +540,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
                           {player.avatar}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-black text-base sm:text-lg text-white group-hover:text-yellow-300 transition-colors uppercase italic">
                               {player.name}
                             </span>
@@ -400,6 +549,15 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ players, teams, state, h
                                 <Flame className="w-3.5 h-3.5 fill-current animate-bounce" />
                                 {player.streak}
                               </span>
+                            )}
+                            {overtake && (
+                              <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: [1.3, 1, 1.1, 1] }}
+                                className="bg-gradient-to-r from-yellow-400 to-orange-500 text-indigo-950 font-black text-xs px-2.5 py-0.5 rounded-full uppercase shadow flex items-center gap-1 animate-bounce"
+                              >
+                                🚀 +{overtake.diff} {overtake.diff === 1 ? 'place' : 'places'}
+                              </motion.span>
                             )}
                           </div>
                           {player.team && (
