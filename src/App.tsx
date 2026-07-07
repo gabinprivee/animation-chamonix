@@ -8,6 +8,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { QrCodeModal } from './components/QrCodeModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AnimatePresence, motion } from 'motion/react';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { Sparkles, Trophy, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
@@ -18,20 +19,43 @@ export default function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [userPseudo, setUserPseudo] = useState<string | null>(() => sessionStorage.getItem('user_pseudo'));
 
-  const [currentAnimator, setCurrentAnimator] = useState<{ name: string; avatar: string }>(() => {
+  const currentAnimatorState = useState<{ name: string; avatar: string }>(() => {
     const savedName = localStorage.getItem('admin_animator_name') || 'mickey';
     const savedAvatar = localStorage.getItem('admin_animator_avatar') || '🐭';
     return { name: savedName, avatar: savedAvatar };
   });
+  const currentAnimator = currentAnimatorState[0];
+  const setCurrentAnimator = currentAnimatorState[1];
 
   useEffect(() => {
     // Check if previously logged in session token exists
     const token = localStorage.getItem('admin_session_token');
     if (token === 'admin-session-token-valid') {
       setIsAdminLoggedIn(true);
+      setIsAdminView(true); // Open admin view directly if already admin
     }
   }, []);
+
+  const handleJoinAsPlayer = async (pseudo: string) => {
+    if (!data) return;
+    const exists = data.players.some(p => p.name.toLowerCase() === pseudo.toLowerCase());
+    if (!exists) {
+      try {
+        await apiFetch('/api/admin/players', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', player: { name: pseudo } })
+        });
+        handleRefresh();
+      } catch (e) {
+        console.error('Failed to create player', e);
+      }
+    }
+    sessionStorage.setItem('user_pseudo', pseudo);
+    setUserPseudo(pseudo);
+  };
 
   const handleToggleSound = () => {
     const nextState = !soundEnabled;
@@ -104,6 +128,20 @@ export default function App() {
         onLogout={handleLogoutAdmin}
         onRefresh={handleRefresh}
       />
+    );
+  }
+
+  // Show Welcome Screen if not logged in as admin and no pseudo
+  if (!userPseudo && !isAdminLoggedIn) {
+    return (
+      <>
+        <WelcomeScreen onJoin={handleJoinAsPlayer} onAdminLogin={() => setIsAdminLoginOpen(true)} />
+        <AdminLoginModal
+          isOpen={isAdminLoginOpen}
+          onClose={() => setIsAdminLoginOpen(false)}
+          onSuccess={handleAdminSuccess}
+        />
+      </>
     );
   }
 

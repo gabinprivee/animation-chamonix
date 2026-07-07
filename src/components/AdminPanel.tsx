@@ -87,7 +87,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       await apiFetch('/api/admin/points-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamName, delta: pts, reason, animator: currentAnimator?.name || 'mickey' }),
+        body: JSON.stringify({ teamName, points: pts, reason, animator: currentAnimator?.name || 'mickey' }),
       });
       onRefresh();
     } catch (err) {
@@ -188,6 +188,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       onRefresh();
     } catch (err) {
       console.error('Update player team error:', err);
+    }
+  };
+  const handleUpdatePlayerName = async (player: Player, newName: string) => {
+    try {
+      await apiFetch("/api/admin/players", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          player: { ...player, name: newName },
+          animator: currentAnimator?.name || "mickey"
+        })
+      });
+      onRefresh();
+    } catch (err) {
+      console.error("Update player name error:", err);
     }
   };
 
@@ -665,7 +681,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{player.avatar}</span>
                         <div>
-                          <p className="font-bold text-white text-sm">{player.name}</p>
+                          <input
+                            type="text"
+                            defaultValue={player.name}
+                            onBlur={(e) => {
+                              if (e.target.value.trim() && e.target.value.trim() !== player.name) {
+                                handleUpdatePlayerName(player, e.target.value.trim());
+                              }
+                            }}
+                            className="font-bold text-white text-sm bg-transparent border-b border-white/20 focus:border-amber-400 focus:outline-none w-24"
+                          />
                           <div className="flex items-center gap-2 mt-1">
                             <select
                               value={player.team || 'AUCUNE'}

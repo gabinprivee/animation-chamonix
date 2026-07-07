@@ -1,4 +1,4 @@
-import { LeaderboardData } from '../types';
+import { LeaderboardData, ANIMATORS_LIST } from '../types';
 
 /**
  * Helper de configuration pour la Solution 2 (Serveur à part / Netlify / 40 PC)
@@ -97,7 +97,8 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
   const targetUrl = getApiUrl(endpoint);
   try {
     const res = await fetch(targetUrl, options);
-    if (res.ok) {
+    const contentType = res.headers.get('content-type');
+    if (res.ok && contentType && contentType.includes('application/json')) {
       return res;
     }
   } catch (err) {
@@ -220,10 +221,10 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
   }
 
   if (cleanPath === '/api/admin/points-batch') {
-    const { teamName, delta, reason, animator } = body;
-    const actualDelta = Number(delta) * (data.state.multiplier || 1);
+    const { teamName, points, reason, animator } = body;
+    const actualDelta = Number(points) * (data.state.multiplier || 1);
     data.players.forEach(p => {
-      if (!teamName || p.team === teamName) {
+      if (!teamName || teamName === 'ALL' || p.team === teamName) {
         p.score += actualDelta;
         p.lastUpdated = Date.now();
       }
