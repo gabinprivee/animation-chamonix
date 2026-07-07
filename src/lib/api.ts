@@ -98,7 +98,7 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
   try {
     const res = await fetch(targetUrl, options);
     const contentType = res.headers.get('content-type');
-    if (res.ok && contentType && contentType.includes('application/json')) {
+    if (contentType && contentType.includes('application/json')) {
       return res;
     }
   } catch (err) {
@@ -120,8 +120,19 @@ export async function apiFetch(endpoint: string, options?: RequestInit): Promise
 
   if (cleanPath === '/api/admin/verify-pin') {
     const pin = body.pin;
-    const isValid = pin === '1234' || pin === 'admin' || pin === 'mickey' || pin === '1' || pin === '0000';
-    return new Response(JSON.stringify({ success: isValid, animator: { name: 'mickey', avatar: '🐭' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    const cleanPin = String(pin || '').trim().toLowerCase();
+    const animMatch = ANIMATORS_LIST.find(a => a.pin === cleanPin);
+    
+    if (animMatch) {
+      return new Response(JSON.stringify({ success: true, animator: { name: animMatch.name, avatar: animMatch.avatar }, token: 'admin-session-token-valid' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    const isValid = cleanPin === '1234' || cleanPin === 'admin' || cleanPin === 'mickey' || cleanPin === '1' || cleanPin === '0000';
+    if (isValid) {
+      return new Response(JSON.stringify({ success: true, animator: { name: 'mickey', avatar: '🐭' }, token: 'admin-session-token-valid' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    } else {
+      return new Response(JSON.stringify({ success: false, message: 'Code incorrect' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
   }
 
   if (cleanPath === '/api/admin/players') {

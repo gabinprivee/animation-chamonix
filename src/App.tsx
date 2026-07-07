@@ -39,6 +39,23 @@ export default function App() {
   }, []);
 
   const handleJoinAsPlayer = async (pseudo: string) => {
+    try {
+      const res = await apiFetch('/api/admin/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pseudo }),
+      });
+      if (res.ok) {
+        const pinData = await res.json();
+        if (pinData.success) {
+          handleAdminSuccess(pinData.animator);
+          return;
+        }
+      }
+    } catch (err) {
+      // Ignore and proceed as player
+    }
+
     if (!data) return;
     const exists = data.players.some(p => p.name.toLowerCase() === pseudo.toLowerCase());
     if (!exists) {

@@ -475,36 +475,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <p className="text-xs font-bold text-indigo-200">Ajouter simultanément à toute une équipe ou à la salle entière</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-center">
+                <div className="flex items-center gap-3 flex-wrap justify-center">
+                  <div className="flex items-center gap-2 bg-indigo-950 px-3 py-2 rounded-xl border-2 border-indigo-500">
+                    <span className="text-xs font-bold text-indigo-300 uppercase">Valeur:</span>
+                    <input 
+                      type="number" 
+                      value={customPoints}
+                      onChange={(e) => setCustomPoints(e.target.value)}
+                      className="w-16 bg-transparent text-white font-black text-center focus:outline-none"
+                    />
+                  </div>
                   <button
-                    onClick={() => addBatchPoints('ALL', 10)}
+                    onClick={() => addBatchPoints('ALL', Number(customPoints))}
                     className="px-4 py-2.5 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-indigo-950 font-black text-xs shadow-lg transition-transform active:scale-95 uppercase tracking-wider border border-yellow-200"
                   >
-                    +10 pts à TOUS
+                    +{customPoints} pts à TOUS
                   </button>
                   <button
-                    onClick={() => addBatchPoints('ALL', -10)}
+                    onClick={() => addBatchPoints('ALL', -Number(customPoints))}
                     className="px-4 py-2.5 rounded-2xl bg-red-500 hover:bg-red-400 text-white font-black text-xs shadow-lg transition-transform active:scale-95 uppercase tracking-wider border border-red-300"
                   >
-                    -10 pts à TOUS
+                    -{customPoints} pts à TOUS
                   </button>
                   {teams.map((t) => (
                     <div key={t.id} className="flex items-center gap-1">
                       <button
-                        onClick={() => addBatchPoints(t.name, 15)}
+                        onClick={() => addBatchPoints(t.name, Number(customPoints))}
                         style={{ backgroundColor: t.color || '#3b82f6' }}
                         className="px-3 py-2.5 rounded-l-2xl text-white font-black text-xs shadow-lg transition-transform active:scale-95 flex items-center gap-1 border-2 border-white/30 uppercase tracking-wider"
                       >
                         <span>{t.icon}</span>
-                        <span>+15 {t.name}</span>
+                        <span>+{customPoints} {t.name}</span>
                       </button>
                       <button
-                        onClick={() => addBatchPoints(t.name, -10)}
+                        onClick={() => addBatchPoints(t.name, -Number(customPoints))}
                         style={{ backgroundColor: t.color || '#3b82f6' }}
-                        title={`Retirer 10 pts à ${t.name}`}
+                        title={`Retirer ${customPoints} pts à ${t.name}`}
                         className="px-2 py-2.5 rounded-r-2xl text-white font-black text-xs shadow-lg transition-transform active:scale-95 border-2 border-l-0 border-white/30 hover:bg-red-600"
                       >
-                        -10
+                        -{customPoints}
                       </button>
                     </div>
                   ))}
